@@ -1,257 +1,305 @@
-/*
-* SPOILER ALERT! 
-* WORDS FOR THE GAME ARE IN THIS FILE ;)
-* ©2014 Nate Wiley -- MIT License
-Sounds from http://soundfxnow.com, and http://www.soundjay.com
-Fonts from Google Fonts
-*/
-(function($, window, undefined){
+'use strict';
 
-  Hangman = {
-    init: function(words){
-      this.words = words,
-      this.hm = $(".hangman"),
-      this.msg = $(".message"),
-      this.msgTitle = $(".title"),
-      this.msgText = $(".text"),
-      this.restart = $(".restart"),
-      this.wrd = this.randomWord(),
-      this.correct = 0,
-      this.guess = $(".guess"),
-      this.wrong = $(".wrong"),
-      this.wrongGuesses = [],
-      this.rightGuesses = [],
-      this.guessForm = $(".guessForm"),
-      this.guessLetterInput = $(".guessLetter"),
-      this.goodSound = new Audio("https://s3-us-west-2.amazonaws.com/s.cdpn.io/74196/goodbell.mp3"),
-      this.badSound = new Audio("https://s3-us-west-2.amazonaws.com/s.cdpn.io/74196/bad.mp3"),
-      this.winSound = new Audio("https://s3-us-west-2.amazonaws.com/s.cdpn.io/74196/win.mp3"),
-      this.loseSound = new Audio("https://s3-us-west-2.amazonaws.com/s.cdpn.io/74196/lose.mp3"),
-      this.setup();
-    },
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
+var cacheKey = 'wordfreeplay';
 
-    setup: function(){
-      this.binding();
-      this.sounds();
-      this.showGuess(this.wrongGuesses);
-      this.showWrong();
+var LocalStorageCache = (function () {
+  function LocalStorageCache() {
+    _classCallCheck(this, LocalStorageCache);
+  }
 
-    },
-
-    
-    sounds: function(){  
-      this.badSound.volume = .4;
-      this.goodSound.volume = .4;
-      this.winSound.volume = .8;
-      this.loseSound.volume = .4;
-      
-    },
-    
-    
-    binding: function(){
-      this.guessForm.on("submit", $.proxy(this.theGuess, this));
-      this.restart.on("click", $.proxy(this.theRestart, this));
-    },
-
-
-    playSound: function(sound){
-      this.stopSound(sound);
-      this[sound].play();
-    },
-
-
-    stopSound: function(sound){
-      this[sound].pause();
-      this[sound].currentTime = 0;
-
-    },
-
-
-    theRestart: function(e){
-      e.preventDefault();
-      this.stopSound("winSound");
-      this.stopSound("loseSound");
-      this.reset();
-    },
-
-
-    theGuess: function(e){
-      e.preventDefault();
-      var guess = this.guessLetterInput.val();
-      if(guess.match(/[a-zA-Z]/) && guess.length == 1){
-        if($.inArray(guess, this.wrongGuesses) > -1 || $.inArray(guess, this.rightGuesses) > -1){
-          this.playSound("badSound");
-          this.guessLetterInput.val("").focus();
-        }
-        else if(guess) {
-          var foundLetters = this.checkGuess(guess);
-          if(foundLetters.length > 0){
-            this.setLetters(foundLetters);
-            this.playSound("goodSound");
-            this.guessLetterInput.val("").focus();
-          } else {
-            this.wrongGuesses.push(guess);
-            if(this.wrongGuesses.length == 10){
-              this.lose();
-            } else {
-              this.showWrong(this.wrongGuesses);
-              this.playSound("badSound");
-            }
-            this.guessLetterInput.val("").focus();
-          }
-        }
-      } else {
-        this.guessLetterInput.val("").focus();
-      }
-    },
-
-    randomWord: function(){
-      return this._wordData(this.words[ Math.floor(Math.random() * this.words.length)] );
-    },
-
-
-    showGuess: function(){
-      var frag = "<ul class='word'>";
-      $.each(this.wrd.letters, function(key, val){
-        frag += "<li data-pos='" +  key  + "' class='letter'>*</li>";
-      });
-      frag += "</ul>";
-      this.guess.html(frag);
-    },
-
-
-    showWrong: function(wrongGuesses){
-      if(wrongGuesses){
-        var frag = "<ul class='wrongLetters'>";
-        frag += "<p>Wrong Letters: </p>";
-        $.each(wrongGuesses, function(key, val){
-          frag += "<li>" + val + "</li>";
-        });
-        frag += "</ul>";
-      }
-      else {
-        frag = "";
-      }
-
-      this.wrong.html(frag);
-    },
-
-
-    checkGuess: function(guessedLetter){
-      var _ = this;
-      var found = [];
-      $.each(this.wrd.letters, function(key, val){
-        if(guessedLetter == val.letter.toLowerCase()){
-          found.push(val);
-          _.rightGuesses.push(val.letter);
-        }
-      });
-      return found;
-
-    },
-
-
-    setLetters: function(letters){
-      var _ = this;
-      _.correct = _.correct += letters.length;
-      $.each(letters, function(key, val){
-        var letter = $("li[data-pos=" +val.pos+ "]");
-        letter.html(val.letter);
-        letter.addClass("correct");
-
-        if(_.correct  == _.wrd.letters.length){
-          _.win();
-        }
-      });
-    },
-
-
-    _wordData: function(word){
-
-      return {
-        letters: this._letters(word),
-        word: word.toLowerCase(),
-        totalLetters: word.length
-      };
-    },
-
-
-    hideMsg: function(){
-      this.msg.hide();
-      this.msgTitle.hide();
-      this.restart.hide();
-      this.msgText.hide();
-    },
-
-
-    showMsg: function(){
-      var _ = this;
-      _.msg.show("blind", function(){
-        _.msgTitle.show("bounce", "slow", function(){
-          _.msgText.show("slide", function(){
-            _.restart.show("fade");
-          });
-
-        });
-
-      });
-    },
-
-
-    reset: function(){
-      this.hideMsg();
-      this.init(this.words);
-      this.hm.find(".guessLetter").focus();
-
-    },
-
-
-    _letters: function(word){
-      var letters = [];
-      for(var i=0; i<word.length; i++){
-        letters.push({
-          letter: word[i],
-          pos: i
-        });
-      }
-      return letters;
-    },
-
-
-    rating: function(){
-      var right = this.rightGuesses.length,
-          wrong = this.wrongGuesses.length || 0,
-          rating = {
-            rating: Math.floor(( right / ( wrong + right )) * 100),
-            guesses: (right + wrong)
-            
-          };
-      return rating;
-    },
-
-    win: function(){
-      var rating = this.rating();
-      this.msgTitle.html("Awesome, You Won!");
-      // this is messy
-      this.msgText.html("You solved the word in <span class='highlight'>" + rating.guesses + "</span> Guesses!<br>Score: <span class='highlight'>" + rating.rating + "%</span>");
-      this.showMsg();
-      this.playSound("winSound");
-
-    },
-
-
-    lose: function(){
-      this.msgTitle.html("You Lost.. The word was <span class='highlight'>"+ this.wrd.word +"</span>");
-      this.msgText.html("Don't worry, you'll get the next one!");
-      this.showMsg();
-      this.playSound("loseSound");
+  LocalStorageCache.prototype.get = function get(key) {
+    var item = localStorage.getItem(cacheKey + key);
+    console.log('got item', item, typeof item);
+    try {
+      return JSON.parse(item);
+    } catch (e) {
+      console.log('parse error', item, typeof item);
+      return item;
     }
-  
   };
 
-  var wordList = ["chrome", "firefox", "codepen", "javascript", "jquery", "twitter", "github", "wordpress", "opera", "sass", "layout", "standards", "semantic", "designer", "developer", "module", "component", "website", "creative", "banner", "browser", "screen", "mobile", "footer", "header", "typography", "responsive", "programmer", "css", "border", "compass", "grunt", "pixel", "document", "object", "ruby", "modernizr", "bootstrap", "python", "php", "pattern", "ajax", "node", "element", "android", "application", "adobe", "apple", "google", "microsoft", "bookmark", "internet", "icon", "svg", "background", "property", "syntax", "flash", "html", "font", "blog", "network", "server", "content", "database", "socket", "function", "variable", "link", "apache", "query", "proxy", "backbone", "angular", "email", "underscore", "cloud"];
+  LocalStorageCache.prototype.has = function has(key) {
+    return !_.isNull(localStorage.getItem(cacheKey + key));
+  };
 
-  Hangman.init(wordList);
-  
-})(jQuery, window);
+  LocalStorageCache.prototype.set = function set(key, value) {
+    if (_.isPlainObject(value)) {
+      value = JSON.stringify(value);
+    }
+    console.log("storing", value, typeof value);
+    return localStorage.setItem(cacheKey + key, value);
+  };
+
+  return LocalStorageCache;
+})();
+
+;
+var cache = new LocalStorageCache();
+
+$(document).ready(function () {
+  // Clear out any pending requests.
+  speechSynthesis.cancel();
+
+  $('body').on('keypress', function (event) {
+    var char = String.fromCharCode(event.which);
+    var letters = /[a-z]/i;
+    var isTargetAnInput = $(event.target).is("input");
+    if (!isTargetAnInput && letters.test(char)) {
+      focusInput();
+    }
+  });
+
+  var voice;
+  var lang = "en-GB";
+  var form = document.querySelector('#wordForm');
+  var input = document.querySelector('#wordInput');
+  var attemptTemplate = _.template('\n    <div class=\'attempt animated bounceInDown <%= classes %>\'>\n      <%= mark %>\n      <%- word %>\n      <% if (!hideButtons) { %>\n      <span class="buttons">\n        <button class="btn btn-sm btn-default" data-action="pronounce" data-word="<%= word %>">\n          <i class="fa fa-volume-up" aria-hidden="true"></i> Listen\n        </button>\n        <button class="btn btn-sm btn-default" data-action="define" data-word="<%= word %>">\n          <i class="fa fa-question" aria-hidden="true"></i> Define\n        </button>\n        <button class="btn btn-sm btn-default" data-action="example" data-word="<%= word %>">\n          <i class="fa fa-quote-right" aria-hidden="true"></i> Example\n        </button>\n      </span>\n      <% } %>\n    </div>\n  ');
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var text = _.trim(input.value);
+    if (text) {
+      isWord(text).then(function (isWord) {
+        if (isWord) {
+          announceValidWord(text);
+          addToValidList(text);
+        } else {
+          announceInvalidWord(text);
+          addToInvalidList(text);
+          shakeInput();
+        }
+        focusInput();
+      });
+    }
+  }, true);
+
+  function shakeInput() {
+    $(input).addClass('shake').one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function () {
+      $(input).removeClass('shake');
+    });
+  }
+
+  function announceValidWord(word) {
+    speak("You just spelled " + word + ".");
+  }
+
+  function announceInvalidWord(word) {
+    if (verifySpaces(word)) {
+      speak("that is not a word");
+      speak("words cannot have spaces");
+    } else if (verifyVowels(word)) {
+      speak("that is not a word");
+      speak("words must have vowels");
+      speak("the orange letters are vowels");
+    } else if (verifyNumbers(word)) {
+      speak("that is not a word");
+      speak("words cannot have numbers");
+    } else if (verifyNonletters(word)) {
+      speak("that is not a word");
+      speak("words can only have letters");
+    } else {
+      speak(word + " is not a word.");
+    }
+  }
+
+  var showVowels = _.once(function () {
+    $(input).before("<div id='vowels'>A E I O U</div>");
+  });
+
+  function addToValidList(word) {
+    $("#attempts").prepend(attemptTemplate({
+      word: word,
+      mark: "✓",
+      "classes": "correct",
+      hideButtons: false
+    }));
+  }
+
+  function addToInvalidList(word) {
+    $("#attempts").prepend(attemptTemplate({
+      word: word,
+      mark: "✗",
+      "classes": "incorrect",
+      hideButtons: true
+    }));
+  }
+
+  function speak(word) {
+    console.info("SPEAKING", word);
+    if (canSpeak()) {
+      speechSynthesis.cancel();
+      setTimeout(function () {
+        var utterance = new SpeechSynthesisUtterance();
+        utterance.lang = lang;
+        utterance.text = word;
+        utterance.voice = voice;
+        window.speechSynthesis.speak(utterance);
+      }, 25);
+    }
+  }
+
+  function canSpeak() {
+    return window.speechSynthesis !== undefined;
+  }
+
+  var getDefinition = function getDefinition(word) {
+    var badThings = /\b(?:sex|slang|intercouse|turn on)/i;
+    return makeWordRequest(word).then(function (response) {
+      var best = _.find(response.results, function (result) {
+        var hints = _.compact([].concat(result.usageOf, result.typeOf, result.hasTypes, result.synonyms)).join(' ');
+        return !badThings.test(hints);
+      });
+      if (best) {
+        return best.definition;
+      } else {
+        return undefined;
+      }
+    });
+  };
+
+  var getExamples = function getExamples(word) {
+    return makeWordRequest(word, 'examples').then(function (response) {
+      return response.examples;
+    });
+  };
+
+  function verifySpaces(word) {
+    var spaces = /\s/;
+    return spaces.test(word);
+  }
+  function verifyVowels(word) {
+    var vowels = /[aeiou]/i;
+    return !vowels.test(word);
+  }
+  function verifyNumbers(word) {
+    var numbers = /[0-9]/;
+    return numbers.test(word);
+  }
+  function verifyNonletters(word) {
+    var nonletters = /\W/;
+    return nonletters.test(word);
+  }
+
+  function verifyWord(word) {
+    if (verifySpaces(word)) {
+      return false;
+    } else if (verifyVowels(word)) {
+      return false;
+    } else if (verifyNumbers(word)) {
+      return false;
+    } else if (verifyNonletters(word)) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  function isWord(word) {
+    if (verifyWord(word)) {
+      return getDefinition(word).then(function () {
+        return true;
+      }, function () {
+        // Change to true like i would with angular.
+        return $.Deferred().resolve(false).promise();
+      });
+    } else {
+      return $.Deferred().resolve(false).promise();
+    }
+  }
+
+  speechSynthesis.onvoiceschanged = function () {
+    // Load all voices available
+    var voicesAvailable = window.speechSynthesis.getVoices();
+    var langVoice = _.find(voicesAvailable, function (voice) {
+      return voice.lang == lang;
+    });
+
+    if (langVoice && _.isString(langVoice.lang)) {
+      voice = langVoice;
+      speechSynthesis.onvoiceschanged = undefined;
+    }
+  };
+
+  function focusInput() {
+    input.focus();
+    $(input).select();
+  }
+
+  function performWordAction(action, word) {
+    if (action == "pronounce") {
+      speak(word);
+    } else if (action == "define") {
+      defineWord(word);
+    } else if (action == "example") {
+      speakExample(word);
+    }
+  }
+
+  function defineWord(word) {
+    getDefinition(word).then(function (definition) {
+      if (definition) {
+        speak(definition);
+      } else {
+        speak("I don't know what that means");
+      }
+    });
+  }
+
+  var exampleCache = {};
+  function speakExample(word) {
+    if (!exampleCache[word]) {
+      exampleCache[word] = 0;
+    }
+    getExamples(word).then(function (examples) {
+      if (_.isEmpty(examples)) {
+        speak("I can't use that in a sentence");
+      } else {
+        speak(examples[exampleCache[word]]);
+        exampleCache[word] += 1;
+        if (exampleCache[word] >= examples.length) {
+          exampleCache[word] = 0;
+        }
+      }
+    });
+  }
+
+  function makeWordRequest(word, endpoint, data) {
+    var url = 'https://wordsapiv1.p.mashape.com/words/' + word;
+    if (endpoint) {
+      url += '/' + endpoint;
+    }
+    if (cache.has(url)) {
+      var value = cache.get(url);
+      console.log('cache hit', value, typeof value);
+      if (_.isEmpty(value)) {
+        return $.Deferred().reject().promise();
+      } else {
+        return $.Deferred().resolve(cache.get(url)).promise();
+      }
+    } else {
+      return $.ajax({
+        url: url,
+        type: 'GET',
+        data: data || {},
+        dataType: 'json',
+        beforeSend: function beforeSend(xhr) {
+          xhr.setRequestHeader("X-Mashape-Authorization", "bIpQkVh6s1msht2Atln8aQS8jNUyp1Jt2FwjsnWlSJ0fkFCFJH");
+        }
+      }).then(function (response) {
+        cache.set(url, response);
+        return response;
+      }, function (error) {
+        cache.set(url, '');
+      });
+    }
+  }
+
+  $("#attempts").on("click", "button[data-action]", function () {
+    var el = $(this);
+    var action = el.data('action');
+    var word = el.data('word');
+    performWordAction(action, word);
+  });
+});
